@@ -8,6 +8,8 @@ import { fetchData } from "../Api/pictures";
 import PropTypes from "prop-types";
 
 export class App extends Component {
+  abortController = new AbortController();
+
   state = {
     pictures: [],
     querry: "",
@@ -17,15 +19,17 @@ export class App extends Component {
     isOpenModal: false,
     isLoading: false,
     picturesPerPage: 12,
-    isButtonShow:false
+    isButtonShow: false
   };
 
-  componentDidUpdate( prevProps,prevState) {
+  componentDidUpdate(prevProps, prevState) {
     if (prevState.querry !== this.state.querry) {
-      this.setState({currentPage:1,pictures:[],isButtonShow:false})
-      
-      this.getData();
-      
+      this.setState(
+        { currentPage: 1, pictures: [], isButtonShow: false },
+        () => {
+          this.getData();
+        }
+      );
     }
   }
 
@@ -40,39 +44,46 @@ export class App extends Component {
 
   getData = async () => {
     const { querry, currentPage, picturesPerPage } = this.state;
-  
+
+    this.abortController.abort(); // Отменяем предыдущий запрос
+    this.abortController = new AbortController(); // Создаем новый AbortController
+
     try {
       this.setState({ isLoading: true });
-  
-      setTimeout(async () => {
-        const data = await fetchData(querry, currentPage, picturesPerPage);
-        const totalHits = data.totalHits;
-        const totalPages = Math.ceil(totalHits / picturesPerPage);
-        console.log(totalHits);
-        const picItem = data.hits.map((item) => ({
-          id: item.id,
-          webformatURL: item.webformatURL,
-          largeImageURL: item.largeImageURL,
-        }));
-  
-        this.setState((prevState) => ({
-          pictures: [...prevState.pictures, ...picItem],
-          totalPages: totalPages,
-          isLoading: false,
-        }));
-  
-        console.log(picItem);
-  
-        if (currentPage === totalPages||totalHits===0) {
-          this.setState({
-            isButtonShow: false,
-          });
-        } else {
-          this.setState({
-            isButtonShow: true,
-          });
-        }
-      }, 500);
+
+      const data = await fetchData(
+        querry,
+        currentPage,
+        picturesPerPage,
+        this.abortController.signal // Передаем сигнал отмены запроса
+      );
+
+      const totalHits = data.totalHits;
+      const totalPages = Math.ceil(totalHits / picturesPerPage);
+      console.log(totalHits);
+      const picItem = data.hits.map((item) => ({
+        id: item.id,
+        webformatURL: item.webformatURL,
+        largeImageURL: item.largeImageURL,
+      }));
+
+      this.setState((prevState) => ({
+        pictures: [...prevState.pictures, ...picItem],
+        totalPages: totalPages,
+        isLoading: false,
+      }));
+
+      console.log(picItem);
+
+      if (currentPage === totalPages || totalHits === 0) {
+        this.setState({
+          isButtonShow: false,
+        });
+      } else {
+        this.setState({
+          isButtonShow: true,
+        });
+      }
     } catch (error) {
       console.error(error);
     }
@@ -89,9 +100,8 @@ export class App extends Component {
           this.getData();
         }
       );
-    } 
+    }
   };
-  
 
   handleModaleImage = (image) => {
     const selectedPicture = this.state.pictures.find(
@@ -108,7 +118,8 @@ export class App extends Component {
   };
 
   render() {
-    const { pictures, isLoading, isOpenModal, selectedImage,isButtonShow } = this.state;
+    const { pictures, isLoading, isOpenModal, selectedImage, isButtonShow } =
+      this.state;
 
     return (
       <div>
@@ -118,7 +129,9 @@ export class App extends Component {
           onImageClick={this.handleModaleImage}
         />
         {isLoading && <Loader />}
-        {isButtonShow&&<Button onClick={this.handleLoadMore}>Load More</Button>}
+        {isButtonShow && (
+          <Button onClick={this.handleLoadMore}>Load More</Button>
+        )}
         {isOpenModal && (
           <Modal image={selectedImage} onCloseModal={this.handleCloseModal} />
         )}
