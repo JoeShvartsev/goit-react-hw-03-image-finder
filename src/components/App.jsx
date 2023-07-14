@@ -8,7 +8,7 @@ import { fetchData } from "../Api/pictures";
 import PropTypes from "prop-types";
 
 export class App extends Component {
-  abortController = new AbortController();
+  
 
   state = {
     pictures: [],
@@ -45,8 +45,7 @@ export class App extends Component {
   getData = async () => {
     const { querry, currentPage, picturesPerPage } = this.state;
 
-    this.abortController.abort(); // Отменяем предыдущий запрос
-    this.abortController = new AbortController(); // Создаем новый AbortController
+   
 
     try {
       this.setState({ isLoading: true });
@@ -55,7 +54,7 @@ export class App extends Component {
         querry,
         currentPage,
         picturesPerPage,
-        this.abortController.signal // Передаем сигнал отмены запроса
+        
       );
 
       const totalHits = data.totalHits;
